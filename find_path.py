@@ -52,30 +52,40 @@ def count_segs(node_links):
                     seg_set.add(seg)
     return seg_set
 
-def find_path(current_node,last_node,path_segs,leg_length):
-    if len(path_segs) == len(seg_set) and leg_length >= min_leg:
-        complete_paths.append(path_segs)
-        return
-    else:
-        node_arr = node_links[current_node]
-        for node in node_arr:
-            if node == last_node:
-                continue
-            seg = (current_node,node)
-            if not seg in path_segs:
-                new_path = path_segs + [seg]
-                if leg_length < min_leg or len(node_links[node]) > 1 or len(end_nodes) == 0:
-                    find_path(current_node=node, last_node=current_node,
-                              path_segs=new_path, leg_length=leg_length + 1)
-                elif node in (end_nodes):
-                    end_nodes.remove(node)
-                    find_path(current_node=node, last_node=-1,
-                              path_segs=new_path, leg_length=0)
-                else:
-                    find_path(current_node=end_nodes.pop(0),last_node=-1,
-                              path_segs=new_path,leg_length=0)
+def find_path(current_node,last_node,path_segs,leg_length,start_nodes):
+    if leg_length == 0:
+        start_nodes.remove(current_node)
+    for neighbor in node_links[current_node]:
+        if neighbor == last_node:   # prevents immediate reversal of the previous segment
+            continue
+        seg = (current_node,neighbor)
+        if not seg in path_segs:    # prevents duplicate segments
+            new_node = neighbor
+            new_last_node = current_node
+            new_path = path_segs + [seg]
+            new_leg_length = leg_length + 1     # number of segments from last end node
+            if new_node in end_nodes:
+                if new_leg_length < min_leg:       # prevents path to end node with leg length less than minimum
+                    continue
+                elif set(new_path) == seg_set:
+                    complete_paths.append(new_path)
+                    return
+                else:                           # path has reached an end node        
+                    new_leg_length = 0
+                    if new_node in start_nodes:
+                        new_last_node = -1      # allows path reversal by nullifying last node
+                    elif len(start_nodes) > 0:
+                        new_node = start_nodes[0] # use next available start node to begin next leg
+                    else:
+                        continue
+            find_path(
+                current_node=new_node,
+                last_node=new_last_node,
+                path_segs=new_path,
+                leg_length=new_leg_length,
+                start_nodes=start_nodes.copy()
+            )
 
-# parser to capture command-line arguments
 parser = argparse.ArgumentParser(description=(
                                     'Finds every path through a network of connected nodes that uses each segment exactly once in each direction.\n\n'
 
@@ -102,10 +112,7 @@ if type(node_links) == "<class 'ValueError'>":
     print(type(node_links))
     print(node_links)
     sys.exit()
-end_nodes = []
-for node in range(len(node_links)):
-    if len(node_links[node]) == 1 and node_links[node][0] > -1:
-        end_nodes.append(node)
+end_nodes = [n for n in range(len(node_links)) if len(node_links[n]) == 1 and node_links[n][0] > -1]
 if len(end_nodes) == 0:
     print('There is no end node in the array file. At least one node must have only one neighbor.')
     sys.exit()
@@ -117,6 +124,6 @@ if isinstance(seg_set,Exception):
     sys.exit()
 
 complete_paths = []
-find_path(current_node=end_nodes.pop(0), last_node=-1, path_segs=[], leg_length=0)
+find_path(current_node=end_nodes[0], last_node=-1, path_segs=[], leg_length=0,start_nodes=end_nodes.copy())
 for i in range(len(complete_paths)):
     print('Path #' + str(i + 1) + ':\n' + str(complete_paths[i]))
