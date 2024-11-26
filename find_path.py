@@ -6,25 +6,18 @@ import sys
 import argparse
 import os
 
-def parse_input(input_text):
-    if input_text[0] == '/':
-        data_path = input_text
-    else:
-        if input_text[:2] == './':
-            input_text == input_text[2:]    
-        data_path = os.path.join(os.getcwd(),input_text)
-    return data_path
-
 def set_data_path(filepath):
     while not os.path.isfile(filepath):
-        if len(filepath) > 0:
+        if filepath.startswith('./'):
+            filepath == filepath[2:]
+        elif len(filepath) > 0:
             print('The filepath is not valid.')
+            filepath == ''
         else:
-            input_text = input(f'''
+            filepath = input(f'''
 The current directory is: {os.getcwd()}
 Enter the absolute or relative path of the file containing the array of node connections:
 ''')
-        filepath = parse_input(input_text)
     return filepath
 
 def make_array(path):
@@ -127,3 +120,15 @@ complete_paths = []
 find_path(current_node=end_nodes[0], last_node=-1, path_segs=[], leg_length=0,start_nodes=end_nodes.copy())
 for i in range(len(complete_paths)):
     print('Path #' + str(i + 1) + ':\n' + str(complete_paths[i]))
+output_decision = input('Do you want to save the results to a file? (y/n): ')
+if output_decision == 'y':
+    prompt = 'Enter a filename. By default, file will save to current directory: ' + str(os.getcwd()) + '\n'
+    output_path = os.path.split(input(prompt))
+    while len(output_path[0]) > 0 and not os.path.isdir(output_path[0]):
+        prompt = 'That is not a valid filepath. Try again: \n'
+        output_path = os.path.split(input(prompt))
+    final_path = os.path.join(output_path[0],output_path[1])
+    output_text = ''
+    with open(final_path,'w') as file:
+        for result in complete_paths:
+            file.write(str(result) + '\n\n')
